@@ -1,0 +1,7 @@
+---
+- name: Restart Nginx
+  service:
+    name: nginx
+    state: restarted
+  listen: "nginx config changed"
+  ignore_errors: "{{ ansible_check_mode }}"

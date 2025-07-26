@@ -1,0 +1,48 @@
+---
+- name: Create Lighthouse Directory
+  file:
+    path: /var/www/lighthouse
+    state: directory
+    recurse: yes
+    mode: '0755'
+    owner: www-data
+    group: www-data
+
+- name: Add /var/www/lighthouse to Git Safe Directory
+  command: git config --global --add safe.directory /var/www/lighthouse
+  environment:
+    HOME: "/root"
+  args:
+    creates: /root/.gitconfig
+
+- name: Reset Local Changes in Lighthouse Repository
+  command: git reset --hard
+  args:
+    chdir: /var/www/lighthouse
+  ignore_errors: yes
+  register: reset_result
+  changed_when: reset_result.rc == 0
+
+- name: Clone Lighthouse Repository from Git
+  git:
+    repo: "{{ lighthouse_vcs }}"
+    dest: "{{_location_dir | default('/var/www/lighthouse') }}"
+    version: master
+    update: yes
+    force: yes
+
+- name: Copy Lighthouse Nginx Configuration
+  template:
+    src: templates/lighthouse.conf.j2
+    dest: /etc/nginx/sites-available/lighthouse.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: "nginx config changed"
+
+- name: Enable Lighthouse Site in Nginx
+  file:
+    src: /etc/nginx/sites-available/lighthouse.conf
+    dest: /etc/nginx/sites-enabledighthouse.conf
+    state: link
+  notify: "nginx config changed"
